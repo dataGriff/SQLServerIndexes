@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SQL Index Demo</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; 
+              }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';  
+        font-weight: normal;
+        
+      }
+      .remark-code, .remark-inline-code {
+          font-family: 'Ubuntu Mono'; 
+                background: red;
+      }
+
+            .inverse {
+ 
+        color: #777872;
+        text-shadow: 0 0 20px #333;
+      }
+
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+<!--<img src="Images/SQLRelayLogo.PNG" style="width: 25%; height: 25%" />​-->
+
+
+
+# **SQL Server Index Demo**
+**Clustered and NonClustered Indexes**
+
+Richard Griffiths ([DataGriff](www.DataGriff.com))
+
+Technical Lead at Confused.Com
+
+???
+
+---
+
+# Overview
+
+* How to measure index efficacy
+
+* Our “Regular Query”
+
+* Nonclustered Index for the WHERE clause
+
+* Nonclustered Index for the ON clause
+
+* Back to Our Original Query
+
+* SARGs (Search Arguments)
+
+* Bonus Round: Foreign Keys
+
+* Summary
+
+* Disclaimer
+
+
+???
+
+---
+
+# Introduction 
+
+* A table is called a **HEAP** if it does not have a primary key or unique constraint
+
+* Does not have any logical order, simply based on physical allocation
+
+* Whole heap has to be scanned for SQL Server to find data
+
+* **Indexes** can be added to tables to create logical ordering and aid in data retrieval
+
+???
+
+---
+
+# Introduction
+
+* Two main types of index are **clustered** and **nonclustered**
+
+* There can be only one clustered index per table and this organises the table into a B-tree
+
+* Tables can have up to 999 nonclustered indexes (as of SQL 2008)
+
+* The focus of this presentation will be on implementing nonclustered indexes to improve read query performance 
+
+
+???
+
+---
+
+# How to Measure Index Efficacy
+
+* SET STATISTICS IO ON
+
+* Using Actual Execution Plan (CTRL+M)
+
+* Using Dynamic Management Objects (DMOs)
+
+
+???
+
+
+---
+
+# How to Measure Index Efficacy
+
+
+* What we want to see:
+
+	* Less logical reads
+	
+	* Index seeks instead of scans
+	
+* What we don’t want to see:
+
+	* Lots of logical reads
+	
+	* Key Lookup (Clustered)
+	
+	* Table scans!
+
+???
+
+
+---
+
+# Our Regular Query  
+
+```sql
+SELECT 
+DimDate.CalendarYear
+, DimDate.MonthOfYearName
+, DimDate.CalendarMonthNo
+, DimDate.DayOfMonthNo
+, DimDate.DayOfWeekName
+, DimTest.TestValueCategory
+, Fact.CountTest
+, Fact.AmountTest
+
+FROM import.FactTest Fact WITH(NOLOCK)
+JOIN import.DimDate DimDate WITH(NOLOCK) ON
+DimDate.DateKey  = Fact.DateKey
+JOIN import.DimTest DimTest WITH(NOLOCK) ON
+DimTest.TestKey  = Fact.TestKey;
+
+```
+
+
+???
+
+
+---
+
+# Our Regular Query   
+
+* Implemented as the view acc.RegularQuery
+
+* Customers usually interested in looking at a particular month
+
+```sql
+SELECT * FROM dw.acc.RegularQuery 
+WHERE CalendarMonthNo = 201401;
+```
+
+* Currently lots of clustered index scans and high logical reads
+
+
+???
+
+---
+
+# NonClustered Index for the WHERE Clause
+  
+* Before we look at the interactions, focus on the date components of just the DimDate table
+
+* Lets see how the query performs before adding the index
+
+
+???
+
+---
+
+# NonClustered Index for the WHERE Clause
+
+* A clustered index scan and 8716 logical reads!
+
+* Add a nonclustered index for the field the users are likely to be filtering on
+
+* In this case it will be the column CalendarMonthNo
+
+* Run the query again...
+
+
+???
+
+---
+
+# NonClustered Index for the WHERE Clause
+
+* Peforms 105 logical reads (better)
+
+* Peforms an index seek then does a clustered key lookup
+
+* Lets amend the index again to include the columns being returned in the query
+
+* Run query again....
+
+???
+
+---
+
+# NonClustered Index for the WHERE Clause
+
+* Wow! Performs 2 logical reads!
+
+* Performs an index seek, it doesn't need to do clustered key lookup as the fields are included in the nonclustered index
+
+* This is called a **covering index** :)
+
+* Pretty happy with our WHERE clause for filtering date, now lets see how it fairs with our fact!
+
+???
+
+---
+
+# NonClustered Index for the ON Clause
+
+* When we look at a query that just joins our fact and date together... 
+
+* We get an index seek on our date dimension due to our previous good work 
+
+* But a clustered index scan on our fact (boo!) with 16907 logical reads (boo!)
+
+???
+
+---
+
+# NonClustered Index for the ON Clause
+
+* Add a nonclustered index for the datekey on the fact
+
+* Run the query again...
+
+* What the devil?? It's the same!
+
+???
+
+---
+
+# NonClustered Index for the ON Clause
+
+* That's right, we need to include the fact columns returned so the index is covering
+
+* Quite often we forget that the items returned as measures still need to be included, be careful of this trap!
+
+* Create the index...
+
+* Run it now and get two index seeks on dimension and fact, with fact logical reads down to 348 
+
+
+
+???
+
+---
+
+# Back to Our Original Query... 
+
+* Table scans and lots of reads still on the FactTest and DimTest...
+
+* Lets apply our rules we've learned
+
+* Create nonclustered index on the TestKey in the fact for filtering in the ON clause
+
+* We wont include the extra Count and Amount columns though as they are already included in date
+
+
+???
+
+---
+
+# Back to Our Original Query... 
+
+* Still performing clustered index scan on the fact table and 16097 logical reads
+
+* Need to also include the TestKey in the DateKey index so that the query is covered by a nonclustered index!
+
+* Good now we get 376 logical reads on fact and uses a nonclustered index seek (good times)
+
+???
+
+---
+
+# Back to Our Original Query... 
+
+* Good now get 376 logical reads on fact and uses a nonclustered index seek (good times)
+
+* But our quest is not yet over...
+
+* Clustered Index scan currently on DimTest and 360 logical reads
+
+* Lets add an appropriate index on the test dimension for the category returned in the query
+
+
+???
+
+---
+
+# Back to Our Original Query... 
+
+* Nonclustered index scan and down to 224 logical reads
+
+* I think our work here is done... 
+
+???
+
+
+---
+
+# Compare Indexed Objects with the Heap Objects 
+
+* Nearly 25000 logical reads on the heap and all queries were entire table scans
+
+* About 600 logical reads on indexed objects and primarily index seeks, total time reduced by about third
+
+* Good indexes = Big Impact 
+
+???
+
+---
+
+# SARG: Use the Indexed Column
+
+* Indexes still need to be used appropriately in order for them to work effectively
+
+* **SARG** - Search Argument
+
+* How good a column is for WHERE clauses is known as its **SARGability**
+
+* Using calendar year and month of year name name instead of calendar month no will not reap same benefits
+
+* Users therefore need to be aware of indexes for them to work 
+
+* Or more importantly... **a good database designer knows what their users are querying on and will index appropriately!**
+
+???
+
+---
+
+# SARG: Use the Correct DataType of the Indexed Column
+
+* The example shows using the char(6) version of the calendar month number instead of integer
+
+* When use an integer as an argument it doesn't use index appropriately as has to convert at runtime so performs a scan instead of a seek
+
+* When we use the matched datatype in the argument then index gets used
+
+???
+
+---
+
+# SARG: Use the Correct DataType of the Indexed Column
+
+* Indexes seeks still get used with a single use of the wildcard at the middle or end of a LIKE statement 
+
+* When you put a wildcard at the beginning then the index is not used effectively and scans will take place
+
+* It is still better to use definite matches where possible
+
+
+???
+
+---
+
+# Bonus Round: Foreign Keys 
+
+* Look at a query on our regular query view that uses only date components
+
+* Do we really want it to look at the DimTest table in this query? 
+
+* If only there was a way for the query to ignore them...
+
+* What happens if we put foreign keys from the fact to the dimension table..?  
+
+???
+
+---
+
+# Bonus Round: Foreign Keys 
+
+* That's right foreign keys allow the query to ignore unused objects
+
+* Good for performance not just referential integrity
+
+* Potentially large complex views can still be used to generate simple plans
+
+
+???
+
+---
+
+# Summary 
+
+* Nonclustered indexes designed well can vastly improve query performance
+
+* Covering indexes in particular allow queries to be completely satisfied by the nonclustered index
+
+* The columns that are indexed need to correlate with what users are querying on 
+
+* Users need to be informed of how to utilise the indexed columns (or be provided with routines that harness them)
+
+* Foreign keys are not just for referential integrity
+
+???
+
+---
+
+# Disclaimer 
+
+* The content of this presentation are for demonstrative purposes only
+
+* The rules of measuring performance and implementing indexes are not always so cut and dry
+
+* But hopefully the basic knowledge or awareness will aid in your index design and implementation
+
+
+???
+
+---
+
+    </textarea>
+    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
