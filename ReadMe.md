@@ -3,7 +3,7 @@
 
 The following demonstration shows some examples of indexing strategy in a read heavy (OLAP) environment.
 Remember these are purely for demonstrative purposes and your indexing strategy may be different depending on your architecture.
-Always remember indexes used correctly can speed up reads, but may have an overhead on maintainance of them and can degade data writing operations.
+Always remember indexes used correctly can speed up reads, but may have an overhead on maintenance of them and can degrade data writing operations.
 
 ## Overview
 
@@ -44,7 +44,7 @@ In general what we don't want to see...
 * Key Lookup (Clustered)
 * Table scans!
 
-These are extremely fast and loose rules but should help us as we go along. Now lets get stuck in! 
+These are extremely fast and loose rules but should help us as we go along. Now lets get stuck in!
 
 ## Create Architecture
 
@@ -231,9 +231,9 @@ WHERE CalendarMonthNo = 201401;
 
 We get an index seek on our date dimension due to what we did in the previous section.
 
-We still however get a clustered indes scan on our fact with 18227 logical reads.
+We still however get a clustered index scan on our fact with 18227 logical reads.
 
-We shall add a nonclustered index for the datekey on the fact table by executing the below to see if that helps...
+We shall add a nonclustered index for the DateKey on the fact table by executing the below to see if that helps...
 
 ```sql
 USE [IndexDemo]
@@ -344,7 +344,7 @@ WHERE CalendarMonthNo = 201401;
 
 We're still getting lots of reads and table scans on the FactTest and DimTest even though DimDate seems pretty good now.
 
-So applying the rules we've learned, we'll create a nonclustered index on the TestKey in the fatc for filtering in the ON clause.
+So applying the rules we've learned, we'll create a nonclustered index on the TestKey in the fact for filtering in the ON clause.
 We don't need to INCLUDE the measure columns here as our Date index has already taken care of that.
 
 Execute the below to create the index.
@@ -380,7 +380,7 @@ AmountTest
 WHERE CalendarMonthNo = 201401;
 ```
 
-Still performing clustered index scan on the fatc table and 18227 logical reads...
+Still performing clustered index scan on the fact table and 18227 logical reads...
 
 We also now need to included the TestKey in the DateKey index so that the entire query is covered by a nonclustered index.
 
@@ -444,7 +444,7 @@ AmountTest
 WHERE CalendarMonthNo = 201401;
 ```
 
-We've probably gone overboard but now we have 230 logical reads on the DimTest table as it's satisfied by the nonclustere index, so I think our work here is done...
+We've probably gone overboard but now we have 230 logical reads on the DimTest table as it's satisfied by the nonclustered index, so I think our work here is done...
 
 Note this table is still doing an index scan as we're not filtering on this column.
 
@@ -515,7 +515,7 @@ However, if the fact table gets wider the clustered DateKey will always have the
 
 A good index is useless unless it is actually used. This means database designers need to know what columns users want to filter on and users need to know how to utilises these columns effectively. How good a column is for a WHERE clause is known as it's **SARGability**, where a SARG is short for search argument.
 
-In the examples we have just been trying, using calendar year and month of year name insted of calendar month no will not provide the same benefits.
+In the examples we have just been trying, using calendar year and month of year name instead of calendar month no will not provide the same benefits.
 
 Execute queries below to see only the top query shows the indexes being used and hence the appropriate speed and reads.
 **(Ensure you have execution plan on CTRL+M)**
@@ -543,7 +543,7 @@ It's also worth noting here that smaller datatypes mean smaller  indexes, less t
 
 For indexes to be used by an end user correctly they must be supplied with the correct data type.
 
-As strings implcitly convert to integers, supplying a string to an integer column won't matter to the index.
+As strings implicitly convert to integers, supplying a string to an integer column won't matter to the index.
 Therefore to demonstrate the effect there is another Date dimension created in the database where the CalendarMonthNo is a CHAR instead of an INT. INTs cannot be implicitly converted to a CHAR so we should see an effect...
 
 Execute queries below to see only the top query shows the date index being used and hence the appropriate speed and reads.  
@@ -557,7 +557,7 @@ GO
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
 
---doesn't like the implict conversion from int to char on this one
+--doesn't like the implicit conversion from int to char on this one
 SELECT CalendarYear, MonthOfYearName, CalendarMonthNo, DayOfMonthNo, DayOfWeekName, TestValueCategory, CountTest, AmountTest
  FROM acc.RegularQueryChar
 WHERE  CalendarMonthNo = 201401;
@@ -700,7 +700,7 @@ This shows foreign keys can be useful for performance as well as referential int
 
 ## Disclaimer
 
-* This demonstration is purely that and your particular environmnt and architecture may require different indexing strategies.
+* This demonstration is purely that and your particular environment and architecture may require different indexing strategies.
 
 * The rules of measuring performance and implementing indexes are not always so cut and dry.
 
