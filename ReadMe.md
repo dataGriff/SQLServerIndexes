@@ -48,7 +48,7 @@ These are extremely fast and loose rules but should help us as we go along. Now 
 
 ## Create Architecture
 
-First execute the IndexDemoCreateDB on your server to setup the architecture. The script uses "CREATE OR ALTER" so is currently tailored for SQL 2016 and above.
+First execute the [IndexDemoCreateDB](https://github.com/griff182uk/SQLServerIndexes/blob/master/IndexDemoDBCreate.sql) on your server to setup the architecture. The script uses "CREATE OR ALTER" so is currently tailored for SQL 2016 and above.
 
 ## Our Regular Query
 
