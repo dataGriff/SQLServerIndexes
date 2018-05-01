@@ -90,6 +90,9 @@ WHERE CalendarMonthNo = 201401;
 
 ```
 
+You can see at the moment we have a slightly complicated plan for a fairly simple query. There are lots of table scans and a lot of logical reads on each table (DimTest - 360, DimDate - 801, FactTest 17646). 
+Our goal will be to simplify this plan and get those logical reads down using an indexing strategy...
+
 ## NonClustered Index for the WHERE Clause
 
 
