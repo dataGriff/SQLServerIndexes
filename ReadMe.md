@@ -48,7 +48,7 @@ These are extremely fast and loose rules but should help us as we go along. Now 
 
 ## Create Architecture
 
-First execute the IndexDemoCreateDB on your server to setup the architecture. The script uses "CREATE OR ALTER" so is currently tailored for SQL 2016 and above.
+First execute the [IndexDemoCreateDB](https://raw.githubusercontent.com/griff182uk/SQLServerIndexes/master/IndexDemoDBCreate.sql) on your server to setup the architecture. The script uses "CREATE OR ALTER" so is currently tailored for SQL 2016 and above.
 
 ## Our Regular Query
 
@@ -89,6 +89,9 @@ CalendarYear, MonthOfYearName, CalendarMonthNo, DayOfMonthNo, DayOfWeekName, Tes
 WHERE CalendarMonthNo = 201401;
 
 ```
+
+You can see at the moment we have a slightly complicated plan for a fairly simple query. There are lots of table scans and a lot of logical reads on each table (DimTest - 360, DimDate - 801, FactTest 17646). 
+Our goal will be to simplify this plan and get those logical reads down using an indexing strategy...
 
 ## NonClustered Index for the WHERE Clause
 
