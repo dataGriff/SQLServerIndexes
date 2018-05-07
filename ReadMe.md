@@ -7,7 +7,7 @@ Always remember indexes used correctly can speed up reads, but may have an overh
 
 ## Overview
 
-1. HEAPs and Types of Index
+1. [HEAPs and Types of Index](#heaps-and-types-of-index)
 1. How to measure index efficacy
 1. Create architecture
 1. Our “Regular Query”
@@ -16,7 +16,7 @@ Always remember indexes used correctly can speed up reads, but may have an overh
 1. Back to Our Original Query
 1. Turn the DateKey into the clustered index...
 1. SARGs (Search Arguments)
-1. Bonus Round: Foreign Keys
+1. Foreign Key performance benefits 
 1. Summary
 1. Disclaimer
 
@@ -508,6 +508,21 @@ CREATE CLUSTERED INDEX [cidx_FactTest_DateKey] ON [import].[FactTest]
 GO
 ```
 
+Now lets run our query again with the Date as the clustering key.
+
+```sql
+USE IndexDemo;
+GO
+
+SET STATISTICS IO ON;
+SET STATISTICS TIME ON;
+
+SELECT
+CalendarYear, MonthOfYearName, CalendarMonthNo, DayOfMonthNo, DayOfWeekName, TestValueCategory, CountTest, AmountTest
+ FROM acc.RegularQuery
+WHERE CalendarMonthNo = 201401;
+```
+
 Ok, our dimension reads have stayed the same but the fact table logical reads has gone up slightly to from 418 to 513.
 However, if the fact table gets wider the clustered DateKey will always have these columns included, which is very useful, as it is likely this DateKey will always be part of a query against a fact.
 
@@ -544,7 +559,7 @@ It's also worth noting here that smaller datatypes mean smaller  indexes, less t
 For indexes to be used by an end user correctly they must be supplied with the correct data type.
 
 As strings implicitly convert to integers, supplying a string to an integer column won't matter to the index.
-Therefore to demonstrate the effect there is another Date dimension created in the database where the CalendarMonthNo is a CHAR instead of an INT. INTs cannot be implicitly converted to a CHAR so we should see an effect...
+Therefore to demonstrate the effect there is another Date dimension created in the database setup where the CalendarMonthNo is a CHAR instead of an INT. INTs cannot be implicitly converted to a CHAR so we should see an effect...
 
 Execute queries below to see only the top query shows the date index being used and hence the appropriate speed and reads.  
 **(Ensure you have execution plan on CTRL+M)**
@@ -558,18 +573,20 @@ SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
 
 --doesn't like the implicit conversion from int to char on this one
+--see the logical reads are higher on DimDateChar and there is an Index Scan in the query plan
 SELECT CalendarYear, MonthOfYearName, CalendarMonthNo, DayOfMonthNo, DayOfWeekName, TestValueCategory, CountTest, AmountTest
  FROM acc.RegularQueryChar
 WHERE  CalendarMonthNo = 201401;
 
 --uses the index as no conversion of data type
+--logical reads are lower on DimDateChar and there is an Index Seek in the query plan
 SELECT
 CalendarYear, MonthOfYearName, CalendarMonthNo, DayOfMonthNo, DayOfWeekName, TestValueCategory, CountTest, AmountTest
  FROM acc.RegularQueryChar
 WHERE  CalendarMonthNo = '201401';
 ```
 
-This is because the bottom query is having to do an implicit conversion from string to an integer, which renders the index useless.
+This is because the bottom query is having to do an implicit conversion from string to an integer, which renders the index less effective.
 
 There are also issues when using LIKE operators on strings, where if a wildcard is used at the start of a value supplied to the WHERE clause, the index is again rendered useless.
 
@@ -583,15 +600,16 @@ GO
 SET STATISTICS IO ON;
 SET STATISTICS TIME ON;
 
---indexes ok with this one
+--indexes ok with this one and uses an index seek
 SELECT * FROM acc.RegularQueryChar
 WHERE  CalendarMonthNo LIKE '201401%';
 
---indexes ok with this one
+--indexes ok with this one and uses an index seek
+--(noticed fact reads went up - I need to look at why!)
 SELECT * FROM acc.RegularQueryChar
 WHERE  CalendarMonthNo LIKE '2014%1';
 
---nope doesnt like this, performs a scan
+--nope doesnt like this, it therefore performs an index scan
 SELECT * FROM acc.RegularQueryChar
 WHERE  CalendarMonthNo LIKE '%201401';
 

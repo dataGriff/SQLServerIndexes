@@ -745,7 +745,7 @@ DROP TABLE [tools].[TallyDate];
 GO 
 CREATE TABLE tools.TallyDate 
 (
-dt DATE
+dt DATE CONSTRAINT Pk_TallyDate PRIMARY KEY CLUSTERED
 );
 --####################################################################
 RAISERROR('3.9 Create Table Tally',10,0);
@@ -756,7 +756,7 @@ DROP TABLE [tools].[Tally];
 GO 
 CREATE TABLE tools.Tally
 (
-n INT
+n INT CONSTRAINT Pk_Tally PRIMARY KEY CLUSTERED
 );
 
 
