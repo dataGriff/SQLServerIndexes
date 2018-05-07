@@ -1,26 +1,26 @@
 
 # SQL Indexes in an OLAP Architecture
 
-The following demonstration shows some examples of indexing strategy in a read heavy (OLAP) environment.
+The following demonstration shows some examples of indexing strategy in a read heavy (OLAP) environment utilising clustered and nonclustered indexes (and foreign keys).
 Remember these are purely for demonstrative purposes and your indexing strategy may be different depending on your architecture.
 Always remember indexes used correctly can speed up reads, but may have an overhead on maintenance of them and can degrade data writing operations.
 
 ## Overview
 
-1. [HEAPs and Types of Index](#1.0-heaps-and-types-of-index)
-1. How to measure index efficacy
-1. Create architecture
-1. Our “Regular Query”
-1. Nonclustered Index for the WHERE clause
-1. Nonclustered Index for the ON clause
-1. Back to Our Original Query
-1. Turn the DateKey into the clustered index...
-1. SARGs (Search Arguments)
-1. Foreign Key performance benefits 
-1. Summary
-1. Disclaimer
+1. [HEAPs and Types of Index](#heaps-and-types-of-index)
+1. [How to measure index efficacy](#how-to-measure-index-efficacy)
+1. [Create architecture](#create-architecture)
+1. [Our “Regular Query”](#our-regular-query)
+1. [Nonclustered Index for the WHERE clause](#nonClustered-index-for-the-where-clause)
+1. [Nonclustered Index for the ON clause](#nonclustered-index-for-the-on-clause)
+1. [Back to Our Original Query](#back-to-our-original-query)
+1. [Turn the DateKey into the clustered index](#turn-dateKey-into-clustered-index-on-fact-table)
+1. [SARGs (Search Arguments)](#search-arguments)
+1. [Foreign Key performance benefits](#foreign-key-performance-benefits)
+1. [Summary](#summart)
+1. [Disclaimer](#disclaimer)
 
-## 1.0 HEAPs and Types of Index
+## HEAPs and Types of Index
 
 A table is called a **HEAP** if it does not have a primary key or unique constraint. At this point it does not have any logical order, the order of data is simply based on physical allocation. The whole heap has to be scanned for SQL Server to find data which will make it slow for large objects that contain lots of rows. Indexes can be added to tables to create logical ordering and aid in data retrieval.
 The two classic types of index are **clustered** and **nonclustered**. There can be only one clustered index per table and this organises the table into a B-tree. There is a limit to the number of nonclustered indexes a table can have.
@@ -529,7 +529,7 @@ WHERE CalendarMonthNo = 201401;
 Ok, our dimension reads have stayed the same but the fact table logical reads has gone up slightly to from 418 to 513.
 However, if the fact table gets wider the clustered DateKey will always have these columns included, which is very useful, as it is likely this DateKey will always be part of a query against a fact.
 
-## SARGs (Search Arguments)
+## Search Arguments
 
 A good index is useless unless it is actually used. This means database designers need to know what columns users want to filter on and users need to know how to utilises these columns effectively. How good a column is for a WHERE clause is known as it's **SARGability**, where a SARG is short for search argument.
 
@@ -621,7 +621,7 @@ WHERE  CalendarMonthNo LIKE '%201401';
 
 We can therefore seen based on the above that the users query methods are also important with regards to indexes being utilised and queries performing well.
 
-## Bonus Round: Foreign Keys
+## Foreign Key Performance Benefits
 
 If we return only fact and date columns from our original query view, it still does calls do the DimTest table.
 
