@@ -7,7 +7,7 @@ Always remember indexes used correctly can speed up reads, but may have an overh
 
 ## Overview
 
-1. [HEAPs and Types of Index](#heaps-and-types-of-index)
+1. [HEAPs and Types of Index](#1.0-heaps-and-types-of-index)
 1. How to measure index efficacy
 1. Create architecture
 1. Our “Regular Query”
@@ -20,7 +20,7 @@ Always remember indexes used correctly can speed up reads, but may have an overh
 1. Summary
 1. Disclaimer
 
-## HEAPs and Types of Index
+## 1.0 HEAPs and Types of Index
 
 A table is called a **HEAP** if it does not have a primary key or unique constraint. At this point it does not have any logical order, the order of data is simply based on physical allocation. The whole heap has to be scanned for SQL Server to find data which will make it slow for large objects that contain lots of rows. Indexes can be added to tables to create logical ordering and aid in data retrieval.
 The two classic types of index are **clustered** and **nonclustered**. There can be only one clustered index per table and this organises the table into a B-tree. There is a limit to the number of nonclustered indexes a table can have.
