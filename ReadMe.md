@@ -17,7 +17,7 @@ Always remember indexes used correctly can speed up reads, but may have an overh
 1. [Turn the DateKey into the clustered index](#turn-dateKey-into-clustered-index-on-fact-table)
 1. [SARGs (Search Arguments)](#search-arguments)
 1. [Foreign Key performance benefits](#foreign-key-performance-benefits)
-1. [Summary](#summart)
+1. [Summary](#summary)
 1. [Disclaimer](#disclaimer)
 
 ## HEAPs and Types of Index
